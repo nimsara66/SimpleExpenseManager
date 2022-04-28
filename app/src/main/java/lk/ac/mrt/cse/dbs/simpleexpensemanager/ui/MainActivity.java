@@ -28,6 +28,12 @@ import android.support.v7.widget.Toolbar;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.R;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.control.ExpenseManager;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.control.InMemoryDemoExpenseManager;
+import lk.ac.mrt.cse.dbs.simpleexpensemanager.control.SQLiteDemoExpenseManager;
+import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.AccountDAO;
+import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.TransactionDAO;
+import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.impl.InMemoryAccountDAO;
+import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.impl.InMemoryTransactionDAO;
+import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.impl.SQLiteAccountDAO;
 
 public class MainActivity extends AppCompatActivity {
     private ExpenseManager expenseManager;
@@ -65,7 +71,9 @@ public class MainActivity extends AppCompatActivity {
         tabLayout.setupWithViewPager(mViewPager);
 
         /***  Begin generating dummy data for In-Memory implementation  ***/
-        expenseManager = new InMemoryDemoExpenseManager();
+        TransactionDAO inMemoryTransactionDAO = new InMemoryTransactionDAO();
+        AccountDAO sqliteAccountDAO = new SQLiteAccountDAO(this);
+        expenseManager = new SQLiteDemoExpenseManager(inMemoryTransactionDAO, sqliteAccountDAO);
         /*** END ***/
     }
 
