@@ -34,6 +34,7 @@ import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.TransactionDAO;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.impl.InMemoryAccountDAO;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.impl.InMemoryTransactionDAO;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.impl.SQLiteAccountDAO;
+import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.impl.SQLiteTransactionDAO;
 
 public class MainActivity extends AppCompatActivity {
     private ExpenseManager expenseManager;
@@ -71,9 +72,9 @@ public class MainActivity extends AppCompatActivity {
         tabLayout.setupWithViewPager(mViewPager);
 
         /***  Begin generating dummy data for In-Memory implementation  ***/
-        TransactionDAO inMemoryTransactionDAO = new InMemoryTransactionDAO();
+        TransactionDAO sqliteTransactionDAO = new SQLiteTransactionDAO(this);
         AccountDAO sqliteAccountDAO = new SQLiteAccountDAO(this);
-        expenseManager = new SQLiteDemoExpenseManager(inMemoryTransactionDAO, sqliteAccountDAO);
+        expenseManager = new SQLiteDemoExpenseManager(sqliteTransactionDAO, sqliteAccountDAO);
         /*** END ***/
     }
 

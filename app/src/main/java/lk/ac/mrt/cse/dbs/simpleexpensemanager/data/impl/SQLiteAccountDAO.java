@@ -8,6 +8,8 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.AccountDAO;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.exception.InvalidAccountException;
@@ -15,106 +17,102 @@ import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.model.Account;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.model.ExpenseType;
 
 public class SQLiteAccountDAO extends SQLiteOpenHelper implements AccountDAO {
-    public SQLiteAccountDAO(Context context) {
+    private final Map<String, Account> accounts;
 
+    public SQLiteAccountDAO(Context context) {
         super(context, "AccountData.db", null, 1);
+        this.accounts = new TreeMap<>();
+
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM Accounts", null);
+        int rows = cursor.getCount();
+        cursor.moveToFirst();
+        for (int i=0; i<rows; i++) {
+            String accountNo = cursor.getString(0);
+            String bankName = cursor.getString(1);
+            String accountHolderName = cursor.getString(2);
+            double balance = cursor.getDouble(3);
+            accounts.put(accountNo, new Account(accountNo, bankName, accountHolderName, balance));
+            cursor.moveToNext();
+        }
+        cursor.close();
+        db.close();
     }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE Account(accountNo TEXT PRIMARY KEY, bankName TEXT, accountHolderName TEXT, balance REAL)");
+        db.execSQL("CREATE TABLE Accounts(accountNo TEXT PRIMARY KEY, bankName TEXT, accountHolderName TEXT, balance REAL)");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int i, int i1) {
-        db.execSQL("DROP TABLE IF EXISTS Account");
+        db.execSQL("DROP TABLE IF EXISTS Accounts");
     }
 
     @Override
     public List<String> getAccountNumbersList() {
-        List<String> accounts = new ArrayList<>();
-
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM Account ORDER BY accountNo", null);
-        int rows = cursor.getCount();
-        cursor.moveToFirst();
-        for (int i=0; i<rows; i++) {
-            String accountNo = cursor.getString(0);
-            accounts.add(accountNo);
-            cursor.moveToNext();
-        }
-        cursor.close();
-        return accounts;
+        return new ArrayList<>(accounts.keySet());
     }
 
     @Override
     public List<Account> getAccountsList() {
-        List<Account> accountNos = new ArrayList<>();
-
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM Account ORDER BY accountNo", null);
-        int rows = cursor.getCount();
-        cursor.moveToFirst();
-        for (int i=0; i<rows; i++) {
-            String accountNo = cursor.getString(0);
-            String bankName = cursor.getString(1);
-            String accountHolderName = cursor.getString(2);
-            double balance = cursor.getDouble(3);
-            accountNos.add(new Account(accountNo, bankName, accountHolderName, balance));
-            cursor.moveToNext();
-        }
-        cursor.close();
-        return accountNos;
+        return new ArrayList<>(accounts.values());
     }
 
     @Override
     public Account getAccount(String accountNo) throws InvalidAccountException {
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM Account WHERE accountNo=?", new String[] {accountNo});
-        if (cursor.getCount()>0) {
-            cursor.moveToFirst();
-            String bankName = cursor.getString(1);
-            String accountHolderName = cursor.getString(2);
-            double balance = cursor.getDouble(3);
-            cursor.close();
-            return new Account(accountNo, bankName, accountHolderName, balance);
+        if (accounts.containsKey(accountNo)) {
+            return accounts.get(accountNo);
         }
-        cursor.close();
-        throw new InvalidAccountException("Account not found!");
+        String msg = "Account " + accountNo + " is invalid.";
+        throw new InvalidAccountException(msg);
     }
 
     @Override
     public void addAccount(Account account) {
-//        TODO: need to check if account no exist
+        accounts.put(account.getAccountNo(), account);
+
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
         contentValues.put("accountNo", account.getAccountNo());
         contentValues.put("bankName", account.getBankName());
         contentValues.put("accountHolderName", account.getAccountHolderName());
         contentValues.put("balance", account.getBalance());
-
-        db.insert("Account", null, contentValues);
+        db.insert("Accounts", null, contentValues);
     }
 
     @Override
     public void removeAccount(String accountNo) throws InvalidAccountException {
+        if (!accounts.containsKey(accountNo)) {
+            String msg = "Account " + accountNo + " is invalid.";
+            throw new InvalidAccountException(msg);
+        }
+        accounts.remove(accountNo);
+
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM Account WHERE accountNo=?", new String[] {accountNo});
+        Cursor cursor = db.rawQuery("SELECT * FROM Accounts WHERE accountNo=?", new String[] {accountNo});
         if (cursor.getCount()>0) {
-            db.delete("Account", "accountNo=?", new String[] {accountNo});
+            db.delete("Accounts", "accountNo=?", new String[] {accountNo});
         }
         cursor.close();
+        db.close();
         throw new InvalidAccountException("Account not found!");
     }
 
     @Override
     public void updateBalance(String accountNo, ExpenseType expenseType, double amount) throws InvalidAccountException {
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM Accounts WHERE accountNo=?", new String[] {accountNo});
+
         if (expenseType==ExpenseType.EXPENSE) {
             amount=-amount;
         }
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM Account WHERE accountNo=?", new String[] {accountNo});
-        if (cursor.getCount()>0) {
+
+        if (accounts.containsKey(accountNo) && cursor.getCount()>0) {
+            Account account = accounts.get(accountNo);
+            account.setBalance(account.getBalance() + amount);
+            accounts.put(accountNo, account);
+
             cursor.moveToFirst();
             double newAmount = cursor.getDouble(3)+amount;
             ContentValues contentValues = new ContentValues();
@@ -123,9 +121,17 @@ public class SQLiteAccountDAO extends SQLiteOpenHelper implements AccountDAO {
             contentValues.put("accountHolderName", cursor.getString(2));
             contentValues.put("balance", newAmount);
 
-            db.update("Account", contentValues, "accountNo=?", new String[] {accountNo});
+            db.update("Accounts", contentValues, "accountNo=?", new String[] {accountNo});
+        } else if (accounts.containsKey(accountNo)) {
+            accounts.remove(accountNo);
         }
+
         cursor.close();
-        throw new InvalidAccountException("Account not found!");
+        db.close();
+
+        if (!accounts.containsKey(accountNo)) {
+            String msg = "Account " + accountNo + " is invalid.";
+            throw new InvalidAccountException(msg);
+        }
     }
 }
