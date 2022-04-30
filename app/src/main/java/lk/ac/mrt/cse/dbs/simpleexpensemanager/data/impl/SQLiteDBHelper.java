@@ -20,14 +20,32 @@ import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.model.ExpenseType;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.model.Transaction;
 
 public class SQLiteDBHelper extends SQLiteOpenHelper {
+    // Accounts table creation
+    private static final String SQL_CREATE_ACCOUNTS_TABLE = "CREATE TABLE Accounts(" +
+            "accountNo TEXT PRIMARY KEY, " +
+            "bankName TEXT NOT NULL, " +
+            "accountHolderName TEXT NOT NULL, " +
+            "balance REAL NOT NULL " +
+            ")";
+
+    // Transactions table creation
+    private static final String SQL_CREATE_TRANSACTIONS_TABLE = "CREATE TABLE Transactions(" +
+            "date TEXT NOT NULL, " +
+            "accountNo TEXT NOT NULL, " +
+            "expenseType TEXT NOT NULL, " +
+            "amount REAL NOT NULL, " +
+            "FOREIGN KEY(accountNo) " +
+            "REFERENCES Accounts(accountNo)" +
+            ")";
+
     public SQLiteDBHelper(Context context) {
         super(context, "ExpenseManager.db", null, 1);
     }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE Accounts(accountNo TEXT PRIMARY KEY, bankName TEXT, accountHolderName TEXT, balance REAL)");
-        db.execSQL("CREATE TABLE Transactions(date TEXT, accountNo TEXT, expenseType TEXT, amount REAL)");
+        db.execSQL(SQL_CREATE_ACCOUNTS_TABLE);
+        db.execSQL(SQL_CREATE_TRANSACTIONS_TABLE);
     }
 
     @Override
@@ -67,10 +85,7 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
 
         db.close();
 
-        if (result==-1) {
-            return false;
-        }
-        return true;
+        return result != -1;
     }
 
     public boolean removeAccount(String accountNo) throws InvalidAccountException {
@@ -154,9 +169,6 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
 
         db.close();
 
-        if (result == -1) {
-            return false;
-        }
-        return true;
+        return result != -1;
     }
 }
