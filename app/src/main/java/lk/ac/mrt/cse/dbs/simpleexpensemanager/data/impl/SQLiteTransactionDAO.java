@@ -16,43 +16,13 @@ import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.TransactionDAO;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.model.ExpenseType;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.model.Transaction;
 
-public class SQLiteTransactionDAO extends SQLiteOpenHelper implements TransactionDAO {
+public class SQLiteTransactionDAO implements TransactionDAO {
     private final List<Transaction> transactions;
+    private final SQLiteDBHelper sqLiteDBHelper;
 
-    public SQLiteTransactionDAO(Context context) {
-        super(context, "TransactionData.db", null, 1);
-        transactions = new LinkedList<>();
-
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM Transactions", null);
-        int rows = cursor.getCount();
-        cursor.moveToFirst();
-        for (int i=0; i<rows; i++) {
-            String dateString = cursor.getString(0);
-            String accountNo = cursor.getString(1);
-            String expenseTypeString = cursor.getString(2);
-            double amount = cursor.getDouble(3);
-            cursor.moveToNext();
-            try {
-                Date date = new SimpleDateFormat("dd/MM/yyyy").parse(dateString);
-                ExpenseType expenseType = ExpenseType.valueOf(expenseTypeString);
-                transactions.add(new Transaction(date, accountNo, expenseType, amount));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        cursor.close();
-        db.close();
-    }
-
-    @Override
-    public void onCreate(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE Transactions(date TEXT, accountNo TEXT, expenseType TEXT, amount REAL)");
-    }
-
-    @Override
-    public void onUpgrade(SQLiteDatabase db, int i, int i1) {
-        db.execSQL("DROP TABLE IF EXISTS Transactions");
+    public SQLiteTransactionDAO(SQLiteDBHelper sqLiteDBHelper) {
+        this.transactions = sqLiteDBHelper.getAllTransactions();
+        this.sqLiteDBHelper = sqLiteDBHelper;
     }
 
     @Override
@@ -61,13 +31,7 @@ public class SQLiteTransactionDAO extends SQLiteOpenHelper implements Transactio
         Transaction transaction = new Transaction(date, accountNo, expenseType, amount);
         transactions.add(transaction);
 
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues contentValues = new ContentValues();
-        contentValues.put("date", dateFormat.format(date));
-        contentValues.put("accountNo", accountNo);
-        contentValues.put("expenseType", expenseType.name());
-        contentValues.put("amount", amount);
-        db.insert("Transactions", null, contentValues);
+        sqLiteDBHelper.logTransaction(date, accountNo, expenseType, amount);
     }
 
     @Override
