@@ -21,7 +21,7 @@ public class SQLiteDemoExpenseManager extends ExpenseManager{
 
     @Override
     public void setup() {
-        /*** Begin generating dummy data for In-Memory implementation ***/
+        /*** Setup the persistent storage implementation ***/
         setTransactionsDAO(sqliteTransactionDAO);
         setAccountsDAO(sqliteAccountDAO);
         /*** End ***/

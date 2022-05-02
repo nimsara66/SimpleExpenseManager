@@ -39,7 +39,7 @@ public class SQLiteDBHelper extends SQLiteOpenHelper {
             ")";
 
     public SQLiteDBHelper(Context context) {
-        super(context, "ExpenseManager.db", null, 1);
+        super(context, "190175X.db", null, 1);
     }
 
     @Override
