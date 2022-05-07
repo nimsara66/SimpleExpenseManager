@@ -44,3 +44,5 @@ output.json
 #NDK
 obj/
 .externalNativeBuild
+
+.vscode
